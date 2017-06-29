@@ -1,0 +1,7 @@
+event_presence_prob: 0.5
+mixtures_per_class: 500
+ebrs:  # event-to-background ratios, dB
+- -6
+- 0
+- 6
+seed: 42

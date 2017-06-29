@@ -1,0 +1,6 @@
+librosa>=0.5.0
+numpy>=1.12.1
+pandas>=0.19.2
+PyYAML>=3.11
+SoundFile>=0.8.1
+tqdm>=4.11.2

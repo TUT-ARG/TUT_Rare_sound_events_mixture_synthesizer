@@ -1,0 +1,10 @@
+# development set, test subset
+# Keep untouched! It reproduces mixtures used in DCASE evaluation stage 1.
+# If you wish to perform testing with your own parameters, use another mixing params file, e.g. the provided mixing_params_devtest.yaml
+event_presence_prob: 0.5
+mixtures_per_class: 500
+ebrs:  # event-to-background ratios, dB
+- -6
+- 0
+- 6
+seed: 42
