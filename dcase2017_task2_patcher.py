@@ -1,4 +1,4 @@
-import os, pandas as pd, numpy as np, yaml, shutil, argparse, textwrap
+import os, pandas as pd, numpy as np, yaml, shutil, argparse, textwrap, logging
 
 classnames = ['babycry','glassbreak','gunshot']
 
@@ -45,7 +45,12 @@ def remove_lines_containing_given_substrings_from_file(filepath, substrings):
     return counter
 
 
-def main(path_to_dataset):
+def main(path_to_dataset, log='file'):
+
+    if log=='stdout':
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(filename='log_of_patching.txt', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
     bg_screening_filepath = os.path.join(path_to_dataset, 'data', 'source_data', 'bgs', 'bg_screening.csv')
     classwise_screening_skips = bg_dcase_annotations_preprocess(bg_screening_filepath, classnames=classnames)
@@ -73,7 +78,7 @@ def main(path_to_dataset):
     affected_mixture_files = []
     counter=0
     for recipe_file in recipe_files:
-        print('Filename: {}'.format(recipe_file))
+        logging.debug('Filename: {}'.format(recipe_file))
         classname = [classname for classname in classnames if classname in recipe_file][0]
         recipe_data = read_meta_yaml(recipe_file)
         for recipe in recipe_data:
@@ -81,7 +86,7 @@ def main(path_to_dataset):
             mixture_audio_filename = recipe['mixture_audio_filename']
             if bg_file in classwise_screening_skips[classname]:
                 counter+=1
-                print('{}. Mixture {} was found to be using the bg {}, which is known to naturally contain {} sounds. '
+                logging.debug('{}. Mixture {} was found to be using the bg {}, which is known to naturally contain {} sounds. '
                       'Adding to the list.'.format(counter, mixture_audio_filename, bg_file, classname))
                 affected_mixture_files.append(mixture_audio_filename)
 
@@ -105,20 +110,21 @@ def main(path_to_dataset):
     wav_file_change_counter = 0
     for wav_file in wav_files:
         if any(affected_mixture_file in wav_file for affected_mixture_file in affected_mixture_files):
-            print('Making affected file {} unusable'.format(wav_file))
+            logging.debug('Making affected file {} unusable'.format(wav_file))
             shutil.move(wav_file,wav_file+'_old_dontuse')
             wav_file_change_counter += 1
 
-    print('='*10)
+    logging.debug('='*10)
     if eventlist_file_change_counter + wav_file_change_counter > 0:
-        print('Patching done. Following files were affected and thus patched successfully: ')
+        logging.debug('Patching done. Following files were affected and thus patched successfully: ')
         if mode=='baseline':
-            print('{} meta files with all-class event rolls (baseline style),'.format(meta_file_change_counter))
-        print('{} per-class event list files,'.format(eventlist_file_change_counter))
-        print('{} mixture wav files,'.format(wav_file_change_counter))
+            logging.debug('{} meta files with all-class event rolls (baseline style),'.format(meta_file_change_counter))
+        logging.debug('{} per-class event list files,'.format(eventlist_file_change_counter))
+        logging.debug('{} mixture wav files,'.format(wav_file_change_counter))
     else:
-        print('For some reason there was nothing to patch. Was the dataset already patched? Contact us if you suspect a bug!')
-        print('email: Aleksandr Diment ( firstname.lastname at tut.fi )')
+        logging.debug('For some reason there was nothing to patch. Was the dataset already patched? Contact us if you suspect a bug!')
+        logging.debug('email: Aleksandr Diment ( firstname.lastname at tut.fi )')
+    return (eventlist_file_change_counter, wav_file_change_counter)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -147,4 +153,4 @@ if __name__ == '__main__':
                         default='.', dest='path_to_dataset')
     args = parser.parse_args()
     path_to_dataset = args.path_to_dataset
-    main(path_to_dataset)
+    main(path_to_dataset, log='stdout')
