@@ -11,6 +11,7 @@ except ImportError: # will be 3.x series
 from tqdm import tqdm
 import hashlib
 import warnings
+import dcase2017_task2_patcher
 
 classnames = ['babycry', 'glassbreak', 'gunshot']
 common_fs = 44100
@@ -369,7 +370,8 @@ def relocate_bg_data(input_path='bg_data', output_path = 'newdata'):
             print('Skipping erroneous file %s' %entry[0])
 
 
-def do_mixing(data_path =os.path.join('..','data'), current_subsets = np.array(['devtrain', 'devtest']), magic_anticlipping_factor=0.2, param_hash=default_param_hash):
+def do_mixing(data_path =os.path.join('..','data'), current_subsets = np.array(['devtrain', 'devtest']), magic_anticlipping_factor=0.2,
+              param_hash=default_param_hash, dcase_compatibility_mode=True):
 
     bgs_path = os.path.join(data_path,'source_data', 'bgs')
     events_path = os.path.join(data_path,'source_data', 'events')
@@ -411,6 +413,12 @@ def do_mixing(data_path =os.path.join('..','data'), current_subsets = np.array([
             annotation_strings = [mixture_recipe['annotation_string'] for mixture_recipe in mixture_recipes]
             np.savetxt(os.path.join(mixture_data_path,subset,param_hash,'meta','event_list_' + subset + '_' + classname + '.csv'), annotation_strings, fmt='%s')
 
+    if dcase_compatibility_mode:
+        # patch the generated data
+        csvpathes, wavpatces = dcase2017_task2_patcher.main(os.path.join(data_path,'..'),log='file')
+
+
+
 
 def find_surroundings_of_a_peak(audio, chunk_length):
     peak = np.argmax(np.abs(audio))
@@ -446,7 +454,8 @@ def main(data_path=os.path.join('..','data'),
          generate_devtrain_recipes=True, generate_devtest_recipes=False,
          devtrain_mixing_param_file='mixing_params.yaml',
          devtest_mixing_param_file='mixing_params_devtest_dcase_fixed.yaml',
-         synthesize_devtrain_mixtures=True, synthesize_devtest_mixtures=False):
+         synthesize_devtrain_mixtures=True, synthesize_devtest_mixtures=False,
+         dcase_compatibility_mode=True):
 
     data_path_def = os.path.join('..','data')  # there is one default value in the function
     # signature, however, we need to also revert to the default if it's overridden
@@ -503,7 +512,7 @@ def main(data_path=os.path.join('..','data'),
         print('Generating {} mixtures...'.format(subset))
 
         do_mixing(data_path=data_path, current_subsets =np.array([subset]),
-                  magic_anticlipping_factor=magic_anticlipping_factor, param_hash=param_hash)
+                  magic_anticlipping_factor=magic_anticlipping_factor, param_hash=param_hash, dcase_compatibility_mode=dcase_compatibility_mode)
 
     if synthesize_devtest_mixtures:
         subset = 'devtest'
@@ -517,7 +526,7 @@ def main(data_path=os.path.join('..','data'),
         print('Generating {} mixtures...'.format(subset))
 
         do_mixing(data_path=data_path, current_subsets=np.array([subset]),
-                  magic_anticlipping_factor=magic_anticlipping_factor, param_hash=param_hash)
+                  magic_anticlipping_factor=magic_anticlipping_factor, param_hash=param_hash, dcase_compatibility_mode=dcase_compatibility_mode)
 
 
 if __name__ == '__main__':
@@ -557,6 +566,9 @@ if __name__ == '__main__':
                         required=False, default='mixing_params_devtest_dcase_fixed.yaml', dest='devtest_params')
     args = parser.parse_args()
 
+    # This flag allows for running the patcher after creating mixtures. Later implemented False case, where mixtures will be generated from
+    # non-erroneous data in the first place. Currently setting this to False only generates erroneous data
+    dcase_compatibility_mode = True
 
     generate_devtrain_recipes = (args.subset == 'devtrain') or (args.subset == 'both')
     synthesize_devtrain_mixtures = generate_devtrain_recipes
@@ -570,4 +582,5 @@ if __name__ == '__main__':
          synthesize_devtrain_mixtures=synthesize_devtrain_mixtures,
          synthesize_devtest_mixtures=generate_devtest_recipes,
          devtrain_mixing_param_file=args.devtrain_params,
-         devtest_mixing_param_file=args.devtest_params)
+         devtest_mixing_param_file=args.devtest_params,
+         dcase_compatibility_mode=dcase_compatibility_mode)
